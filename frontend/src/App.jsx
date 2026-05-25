@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import axios from 'axios'
 import './App.css'
 
-const API_BASE_URL = 'https://ai-prompt-studio-backend-um00.onrender.com'
+const API_BASE_URL = 'http://13.233.143.243'
 
 const TOOLS = [
   {
