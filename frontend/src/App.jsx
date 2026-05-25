@@ -40,7 +40,7 @@ const TOOLS = [
     title: 'Sentiment',
     subtitle: 'Find tone and polarity.',
     endpoint: '/api/sentiment',
-    model: 'twitter-roberta-sentiment',
+    model: 'cardiffnlp/twitter-roberta-base-sentiment-latest',
     kind: 'single',
     placeholder: 'Enter a review, feedback, or sentence...',
     examples: [
@@ -55,7 +55,7 @@ const TOOLS = [
     title: 'Question Answering',
     subtitle: 'Ask questions from a context.',
     endpoint: '/api/qa',
-    model: 'roberta-squad2',
+    model: 'deepset/roberta-base-squad2',
     kind: 'dual',
     placeholder: 'Paste context here...',
     questionPlaceholder: 'Ask a question about the context...',
@@ -101,15 +101,12 @@ function App() {
   const [progress, setProgress] = useState(0)
   const [output, setOutput] = useState('')
   const [meta, setMeta] = useState(null)
-
   const [inputText, setInputText] = useState('')
   const [question, setQuestion] = useState('')
   const [history, setHistory] = useState([])
+  const [error, setError] = useState('')
 
-  const tool = useMemo(
-    () => TOOLS.find((item) => item.id === activeTool),
-    [activeTool]
-  )
+  const tool = useMemo(() => TOOLS.find((item) => item.id === activeTool), [activeTool])
 
   useEffect(() => {
     const check = async () => {
@@ -137,19 +134,37 @@ function App() {
     return () => clearInterval(timer)
   }, [loading])
 
-  const runTool = async () => {
-    if (tool.kind === 'dual' && (!inputText.trim() || !question.trim())) return
-    if (tool.kind === 'single' && !inputText.trim()) return
+  const validate = () => {
+    const trimmed = inputText.trim()
+    const q = question.trim()
 
+    if (tool.kind === 'dual') {
+      if (!trimmed) return 'Context is required.'
+      if (!q) return 'Question is required.'
+      return ''
+    }
+
+    if (!trimmed) return 'Input text is required.'
+    return ''
+  }
+
+  const runTool = async () => {
+    const validationMessage = validate()
+    if (validationMessage) {
+      setError(validationMessage)
+      setOutput('')
+      setMeta(null)
+      return
+    }
+
+    setError('')
     setLoading(true)
     setOutput('')
     setMeta(null)
-
     const started = performance.now()
 
     try {
       let res
-
       if (activeTool === 'qa') {
         res = await axios.post(`${API_BASE_URL}${tool.endpoint}`, {
           context: inputText,
@@ -184,8 +199,7 @@ function App() {
       } else if (activeTool === 'qa') {
         setOutput(res.data.answer || '')
       } else if (activeTool === 'ner') {
-        const entities = res.data.entities || []
-        setOutput(JSON.stringify(entities, null, 2))
+        setOutput(JSON.stringify(res.data.entities || [], null, 2))
       } else {
         setOutput(res.data.result || '')
       }
@@ -210,6 +224,7 @@ function App() {
   }
 
   const loadExample = (value) => {
+    setError('')
     if (tool.kind === 'dual') {
       setInputText(value)
       setQuestion('What is this text about?')
@@ -223,6 +238,16 @@ function App() {
     setQuestion('')
     setOutput('')
     setMeta(null)
+    setError('')
+  }
+
+  const copyOutput = async () => {
+    if (!output) return
+    try {
+      await navigator.clipboard.writeText(output)
+    } catch {
+      setError('Copy failed.')
+    }
   }
 
   return (
@@ -236,7 +261,7 @@ function App() {
           </div>
         </div>
 
-        <div className="status-card">
+        <div className={`status-card ${status.includes('Connected') ? 'ok' : 'bad'}`}>
           <span className="status-dot" />
           <div>
             <strong>Backend</strong>
@@ -256,6 +281,7 @@ function App() {
                 setQuestion('')
                 setOutput('')
                 setMeta(null)
+                setError('')
               }}
             >
               <span>{item.title}</span>
@@ -317,12 +343,7 @@ function App() {
 
           <div className="chip-row">
             {tool.examples.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className="chip"
-                onClick={() => loadExample(item)}
-              >
+              <button key={item} type="button" className="chip" onClick={() => loadExample(item)}>
                 {item}
               </button>
             ))}
@@ -337,6 +358,7 @@ function App() {
                   placeholder={tool.placeholder}
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
+                  aria-invalid={Boolean(error)}
                 />
               </label>
 
@@ -347,6 +369,7 @@ function App() {
                   placeholder={tool.questionPlaceholder}
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
+                  aria-invalid={Boolean(error)}
                 />
               </label>
             </div>
@@ -358,9 +381,12 @@ function App() {
                 placeholder={tool.placeholder}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
+                aria-invalid={Boolean(error)}
               />
             </label>
           )}
+
+          {error && <div className="error-box">{error}</div>}
 
           <div className="actions">
             <button type="button" className="primary-btn" onClick={runTool} disabled={loading}>
@@ -376,13 +402,21 @@ function App() {
           <article className="output-card">
             <div className="output-head">
               <h3>Result</h3>
-              {meta && <span className="mini-pill">{meta.latency}</span>}
+              <div className="output-actions">
+                {meta && <span className="mini-pill">{meta.latency}</span>}
+                <button type="button" className="copy-btn" onClick={copyOutput} disabled={!output}>
+                  Copy
+                </button>
+              </div>
             </div>
             <div className="output-body">
               {output ? (
                 <pre>{output}</pre>
               ) : (
-                <p className="placeholder">Your result will appear here.</p>
+                <div className="placeholder-wrap">
+                  <p className="placeholder">Your result will appear here.</p>
+                  <p className="placeholder-sub">Run one of the tools to generate output.</p>
+                </div>
               )}
             </div>
           </article>
