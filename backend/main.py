@@ -13,7 +13,7 @@ model = genai.GenerativeModel("gemini-2.5-flash")
 
 app = FastAPI()
 
-origins = ["http://localhost:5173",]
+origins = ["http://localhost:5173","https://ai-prompt-studio-liard.vercel.app"]
 
 app.add_middleware(
     CORSMiddleware,
