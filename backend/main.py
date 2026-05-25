@@ -18,19 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from transformers import pipeline
 
-<<<<<<< HEAD
 app = FastAPI(title="AI Model Server", version="1.0.0")
-=======
-load_dotenv()
-
-genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
-
-model = genai.GenerativeModel("gemini-2.5-flash")
-
-app = FastAPI()
-
-origins = ["http://localhost:5173","https://ai-prompt-studio-liard.vercel.app"]
->>>>>>> origin/main
 
 app.add_middleware(
     CORSMiddleware,
