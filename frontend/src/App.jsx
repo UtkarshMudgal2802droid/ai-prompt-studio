@@ -14,7 +14,7 @@ function App(){
     }
     async function generateResponse(){
         setLoading(true)
-        const res= await axios.post('http://127.0.0.1:8000/generate',{prompt:prompt})
+        const res= await axios.post('https://ai-prompt-studio-backend-um00.onrender.com/generate',{prompt:prompt})
         setResponse(res.data.response)
         setLoading(false)
     }
