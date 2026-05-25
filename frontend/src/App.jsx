@@ -101,15 +101,11 @@ function App() {
   const [progress, setProgress] = useState(0)
   const [output, setOutput] = useState('')
   const [meta, setMeta] = useState(null)
-
   const [inputText, setInputText] = useState('')
   const [question, setQuestion] = useState('')
   const [history, setHistory] = useState([])
 
-  const tool = useMemo(
-    () => TOOLS.find((item) => item.id === activeTool),
-    [activeTool]
-  )
+  const tool = useMemo(() => TOOLS.find((item) => item.id === activeTool), [activeTool])
 
   useEffect(() => {
     const check = async () => {
@@ -144,38 +140,23 @@ function App() {
     setLoading(true)
     setOutput('')
     setMeta(null)
-
     const started = performance.now()
 
     try {
       let res
-
       if (activeTool === 'qa') {
-        res = await axios.post(`${API_BASE_URL}${tool.endpoint}`, {
-          context: inputText,
-          question,
-        })
+        res = await axios.post(`${API_BASE_URL}${tool.endpoint}`, { context: inputText, question })
       } else if (activeTool === 'generate') {
-        res = await axios.post(`${API_BASE_URL}${tool.endpoint}`, {
-          text: inputText,
-          max_length: 140,
-        })
+        res = await axios.post(`${API_BASE_URL}${tool.endpoint}`, { text: inputText, max_length: 140 })
       } else {
-        res = await axios.post(`${API_BASE_URL}${tool.endpoint}`, {
-          text: inputText,
-        })
+        res = await axios.post(`${API_BASE_URL}${tool.endpoint}`, { text: inputText })
       }
 
       const elapsed = Math.max(1, Math.round(performance.now() - started))
       setProgress(100)
 
       setHistory((prev) => [
-        {
-          id: Date.now(),
-          tool: tool.title,
-          preview: inputText.slice(0, 90),
-          time: new Date().toLocaleTimeString(),
-        },
+        { id: Date.now(), tool: tool.title, preview: inputText.slice(0, 90), time: new Date().toLocaleTimeString() },
         ...prev.slice(0, 4),
       ])
 
@@ -184,8 +165,7 @@ function App() {
       } else if (activeTool === 'qa') {
         setOutput(res.data.answer || '')
       } else if (activeTool === 'ner') {
-        const entities = res.data.entities || []
-        setOutput(JSON.stringify(entities, null, 2))
+        setOutput(JSON.stringify(res.data.entities || [], null, 2))
       } else {
         setOutput(res.data.result || '')
       }
@@ -198,12 +178,7 @@ function App() {
       })
     } catch (err) {
       setOutput(err.response?.data?.detail || err.message || 'Request failed')
-      setMeta({
-        model: tool.model,
-        endpoint: tool.endpoint,
-        latency: 'failed',
-        task: tool.id,
-      })
+      setMeta({ model: tool.model, endpoint: tool.endpoint, latency: 'failed', task: tool.id })
     } finally {
       setLoading(false)
     }
@@ -317,12 +292,7 @@ function App() {
 
           <div className="chip-row">
             {tool.examples.map((item) => (
-              <button
-                key={item}
-                type="button"
-                className="chip"
-                onClick={() => loadExample(item)}
-              >
+              <button key={item} type="button" className="chip" onClick={() => loadExample(item)}>
                 {item}
               </button>
             ))}
@@ -379,11 +349,7 @@ function App() {
               {meta && <span className="mini-pill">{meta.latency}</span>}
             </div>
             <div className="output-body">
-              {output ? (
-                <pre>{output}</pre>
-              ) : (
-                <p className="placeholder">Your result will appear here.</p>
-              )}
+              {output ? <pre>{output}</pre> : <p className="placeholder">Your result will appear here.</p>}
             </div>
           </article>
 
