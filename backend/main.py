@@ -42,7 +42,7 @@ MODELS = {
 
 PIPELINES = {
     "generate": pipeline("text-generation", model=MODELS["generate"]),
-    "summarize": pipeline("text2text-generation", model=MODELS["summarize"]),
+    "summarize": pipeline("summarization", model=MODELS["summarize"]),
     "sentiment": pipeline("sentiment-analysis", model=MODELS["sentiment"]),
     "qa": pipeline("question-answering", model=MODELS["qa"]),
     "translate": pipeline("translation_en_to_fr", model=MODELS["translate"]),
@@ -110,7 +110,7 @@ def summarize(payload: TextPayload) -> dict[str, Any]:
         return {
             "task": "summarize",
             "model": MODELS["summarize"],
-            "result": result[0].get("summary_text", result[0].get("generated_text")),
+            "result": result[0]["summary_text"],
         }
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
