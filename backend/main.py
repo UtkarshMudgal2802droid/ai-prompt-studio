@@ -54,7 +54,7 @@ def query_hf_api(model_id: str, payload: dict) -> Any:
     if not HF_API_TOKEN:
         raise ValueError("Server configuration error: HF_API_TOKEN is missing.")
     
-    url = f"https://api-inference.huggingface.co/models/{model_id}"
+    url = f"https://router.huggingface.co/hf-inference/models/{model_id}"
     headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
     
     response = requests.post(url, headers=headers, json=payload)
