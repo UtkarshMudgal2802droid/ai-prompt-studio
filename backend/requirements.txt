@@ -4,3 +4,4 @@ pydantic
 requests
 python-dotenv
 huggingface-hub
+google-generativeai

@@ -19,7 +19,7 @@ import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from huggingface_hub import InferenceClient
+import google.generativeai as genai
 from pydantic import BaseModel, Field
 
 # Load environment variables from .env file
@@ -28,6 +28,12 @@ load_dotenv()
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 if not HF_API_TOKEN or HF_API_TOKEN == "hf_your_generated_token_here":
     print("WARNING: HF_API_TOKEN is not set or is invalid. Please add it to a .env file.")
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+if GOOGLE_API_KEY:
+    genai.configure(api_key=GOOGLE_API_KEY)
+else:
+    print("WARNING: GOOGLE_API_KEY is not set. Text generation will fail.")
 
 app = FastAPI(title="AI Serverless API", version="2.0.0")
 
@@ -43,7 +49,7 @@ app.add_middleware(
 )
 
 MODELS = {
-    "generate": "Qwen/Qwen2.5-1.5B-Instruct",
+    "generate": "gemini-1.5-flash",
     "summarize": "facebook/bart-large-cnn",
     "sentiment": "cardiffnlp/twitter-roberta-base-sentiment-latest",
     "qa": "deepset/roberta-large-squad2",
@@ -87,24 +93,25 @@ def health() -> dict[str, Any]:
 @app.post("/api/generate")
 def generate(payload: GeneratePayload) -> dict[str, Any]:
     try:
+        if not GOOGLE_API_KEY:
+            raise ValueError("GOOGLE_API_KEY is missing from environment.")
+            
         model_id = MODELS["generate"]
-        client = InferenceClient(token=HF_API_TOKEN)
-        
-        messages = [
-            {"role": "system", "content": "You are a helpful writing assistant. Write a concise, polished response."},
-            {"role": "user", "content": payload.text}
-        ]
-        
-        res = client.chat_completion(
-            model=model_id,
-            messages=messages,
-            max_tokens=payload.max_length,
-            temperature=0.7,
-            top_p=0.9
+        model = genai.GenerativeModel(
+            model_name=model_id,
+            system_instruction="You are a helpful writing assistant. Write a concise, polished response."
         )
-        text = res.choices[0].message.content
         
-        return {"task": "generate", "model": model_id, "result": text.strip()}
+        response = model.generate_content(
+            payload.text,
+            generation_config=genai.GenerationConfig(
+                max_output_tokens=payload.max_length,
+                temperature=0.7,
+                top_p=0.9
+            )
+        )
+        
+        return {"task": "generate", "model": model_id, "result": response.text.strip()}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 

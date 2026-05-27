@@ -10,7 +10,7 @@ const TOOLS = [
     title: 'Text Generation',
     subtitle: 'Create completions and ideas.',
     endpoint: '/api/generate',
-    model: 'Qwen/Qwen2.5-1.5B-Instruct',
+    model: 'gemini-1.5-flash',
     kind: 'single',
     placeholder: "Describe what you'd like the AI to write — e.g., a product description, email draft, or blog intro",
     examples: [
