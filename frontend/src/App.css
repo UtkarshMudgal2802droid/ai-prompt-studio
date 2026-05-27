@@ -406,6 +406,10 @@ button, textarea, input {
   font-weight: 500;
   cursor: pointer;
   transition: all var(--transition);
+  max-width: 350px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .chip:hover {

@@ -10,7 +10,7 @@ const TOOLS = [
     title: 'Text Generation',
     subtitle: 'Create completions and ideas.',
     endpoint: '/api/generate',
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-flash',
     kind: 'single',
     placeholder: "Describe what you'd like the AI to write — e.g., a product description, email draft, or blog intro",
     examples: [

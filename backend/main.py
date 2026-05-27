@@ -49,7 +49,7 @@ app.add_middleware(
 )
 
 MODELS = {
-    "generate": "gemini-1.5-flash",
+    "generate": "gemini-2.5-flash",
     "summarize": "facebook/bart-large-cnn",
     "sentiment": "cardiffnlp/twitter-roberta-base-sentiment-latest",
     "qa": "deepset/roberta-large-squad2",
