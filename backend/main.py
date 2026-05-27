@@ -19,6 +19,7 @@ import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from huggingface_hub import InferenceClient
 from pydantic import BaseModel, Field
 
 # Load environment variables from .env file
@@ -42,7 +43,7 @@ app.add_middleware(
 )
 
 MODELS = {
-    "generate": "mistralai/Mistral-7B-Instruct-v0.3",
+    "generate": "Qwen/Qwen2.5-1.5B-Instruct",
     "summarize": "facebook/bart-large-cnn",
     "sentiment": "cardiffnlp/twitter-roberta-base-sentiment-latest",
     "qa": "deepset/roberta-large-squad2",
@@ -87,21 +88,21 @@ def health() -> dict[str, Any]:
 def generate(payload: GeneratePayload) -> dict[str, Any]:
     try:
         model_id = MODELS["generate"]
-        prompt = f"<s>[INST] You are a helpful writing assistant. Write a concise, polished response to the following request:\n\n{payload.text} [/INST]"
+        client = InferenceClient(token=HF_API_TOKEN)
         
-        api_payload = {
-            "inputs": prompt,
-            "parameters": {
-                "max_new_tokens": payload.max_length,
-                "temperature": 0.7,
-                "top_p": 0.9,
-                "return_full_text": False
-            }
-        }
+        messages = [
+            {"role": "system", "content": "You are a helpful writing assistant. Write a concise, polished response."},
+            {"role": "user", "content": payload.text}
+        ]
         
-        result = query_hf_api(model_id, api_payload)
-        # API returns: [{'generated_text': '...'}]
-        text = result[0].get("generated_text", "")
+        res = client.chat_completion(
+            model=model_id,
+            messages=messages,
+            max_tokens=payload.max_length,
+            temperature=0.7,
+            top_p=0.9
+        )
+        text = res.choices[0].message.content
         
         return {"task": "generate", "model": model_id, "result": text.strip()}
     except Exception as exc:

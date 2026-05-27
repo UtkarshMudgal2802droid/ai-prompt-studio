@@ -10,7 +10,7 @@ const TOOLS = [
     title: 'Text Generation',
     subtitle: 'Create completions and ideas.',
     endpoint: '/api/generate',
-    model: 'mistralai/Mistral-7B-Instruct-v0.3',
+    model: 'Qwen/Qwen2.5-1.5B-Instruct',
     kind: 'single',
     placeholder: "Describe what you'd like the AI to write — e.g., a product description, email draft, or blog intro",
     examples: [
