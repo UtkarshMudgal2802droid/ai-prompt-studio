@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from 'react'
 import axios from 'axios'
 import './App.css'
 
-const API_BASE_URL = 'https://YOUR-BACKEND-URL-HERE.vercel.app' // REPLACE THIS WITH YOUR DEPLOYED BACKEND URL
+const API_BASE_URL = 'https://ai-prompt-studio-yr1s.onrender.com'
 
 const TOOLS = [
   {
