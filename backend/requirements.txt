@@ -1,5 +1,5 @@
 fastapi
 uvicorn
 pydantic
-transformers<5.0.0
-torch --index-url https://download.pytorch.org/whl/cpu
+requests
+python-dotenv

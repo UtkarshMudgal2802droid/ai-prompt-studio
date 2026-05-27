@@ -1,5 +1,6 @@
 """
 AI Model Serving backend.
+Powered by Hugging Face Serverless Inference API.
 
 Routes:
 - GET  /api/health
@@ -11,14 +12,23 @@ Routes:
 - POST /api/ner
 """
 
+import os
 from typing import Any
 
+import requests
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from transformers import pipeline
 
-app = FastAPI(title="AI Model Server", version="1.0.0")
+# Load environment variables from .env file
+load_dotenv()
+
+HF_API_TOKEN = os.getenv("HF_API_TOKEN")
+if not HF_API_TOKEN or HF_API_TOKEN == "hf_your_generated_token_here":
+    print("WARNING: HF_API_TOKEN is not set or is invalid. Please add it to a .env file.")
+
+app = FastAPI(title="AI Serverless API", version="2.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,41 +42,37 @@ app.add_middleware(
 )
 
 MODELS = {
-    "generate": "gpt2",
+    "generate": "mistralai/Mistral-7B-Instruct-v0.3",
     "summarize": "facebook/bart-large-cnn",
     "sentiment": "cardiffnlp/twitter-roberta-base-sentiment-latest",
-    "qa": "deepset/roberta-base-squad2",
+    "qa": "deepset/roberta-large-squad2",
     "translate": "Helsinki-NLP/opus-mt-en-fr",
-    "ner": "dslim/bert-base-NER",
+    "ner": "dslim/bert-large-NER",
 }
 
-PIPELINES = {
-    "generate": pipeline("text-generation", model=MODELS["generate"]),
-    "summarize": pipeline("summarization", model=MODELS["summarize"]),
-    "sentiment": pipeline("sentiment-analysis", model=MODELS["sentiment"]),
-    "qa": pipeline("question-answering", model=MODELS["qa"]),
-    "translate": pipeline("translation_en_to_fr", model=MODELS["translate"]),
-    "ner": pipeline(
-        "ner",
-        model=MODELS["ner"],
-        aggregation_strategy="simple",
-    ),
-}
-
+def query_hf_api(model_id: str, payload: dict) -> Any:
+    if not HF_API_TOKEN:
+        raise ValueError("Server configuration error: HF_API_TOKEN is missing.")
+    
+    url = f"https://api-inference.huggingface.co/models/{model_id}"
+    headers = {"Authorization": f"Bearer {HF_API_TOKEN}"}
+    
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code != 200:
+        err_msg = f"Hugging Face API Error ({response.status_code}): {response.text}"
+        raise RuntimeError(err_msg)
+    return response.json()
 
 class TextPayload(BaseModel):
     text: str = Field(..., min_length=1)
 
-
 class GeneratePayload(BaseModel):
     text: str = Field(..., min_length=1)
-    max_length: int = Field(140, ge=20, le=300)
-
+    max_length: int = Field(140, ge=20, le=500)
 
 class QAPayload(BaseModel):
     context: str = Field(..., min_length=1)
     question: str = Field(..., min_length=1)
-
 
 class TranslatePayload(BaseModel):
     text: str = Field(..., min_length=1)
@@ -74,121 +80,116 @@ class TranslatePayload(BaseModel):
 
 @app.get("/api/health")
 def health() -> dict[str, Any]:
-    """Return API health and available model tasks."""
-    return {"status": "ok", "model_tasks": list(MODELS.keys())}
+    return {"status": "ok", "mode": "serverless_api", "model_tasks": list(MODELS.keys())}
 
 
 @app.post("/api/generate")
 def generate(payload: GeneratePayload) -> dict[str, Any]:
-    """Generate text from a prompt."""
     try:
-        result = PIPELINES["generate"](
-            payload.text,
-            max_length=payload.max_length,
-            num_return_sequences=1,
-            do_sample=True,
-        )
-        return {
-            "task": "generate",
-            "model": MODELS["generate"],
-            "result": result[0]["generated_text"],
+        model_id = MODELS["generate"]
+        prompt = f"<s>[INST] You are a helpful writing assistant. Write a concise, polished response to the following request:\n\n{payload.text} [/INST]"
+        
+        api_payload = {
+            "inputs": prompt,
+            "parameters": {
+                "max_new_tokens": payload.max_length,
+                "temperature": 0.7,
+                "top_p": 0.9,
+                "return_full_text": False
+            }
         }
+        
+        result = query_hf_api(model_id, api_payload)
+        # API returns: [{'generated_text': '...'}]
+        text = result[0].get("generated_text", "")
+        
+        return {"task": "generate", "model": model_id, "result": text.strip()}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.post("/api/summarize")
 def summarize(payload: TextPayload) -> dict[str, Any]:
-    """Summarize long input text."""
     try:
-        result = PIPELINES["summarize"](
-            payload.text,
-            max_length=140,
-            min_length=30,
-            do_sample=False,
-        )
-        return {
-            "task": "summarize",
-            "model": MODELS["summarize"],
-            "result": result[0]["summary_text"],
+        model_id = MODELS["summarize"]
+        api_payload = {
+            "inputs": payload.text,
+            "parameters": {
+                "max_length": 140,
+                "min_length": 30,
+                "do_sample": False
+            }
         }
+        result = query_hf_api(model_id, api_payload)
+        # API returns: [{'summary_text': '...'}]
+        text = result[0].get("summary_text", "")
+        
+        return {"task": "summarize", "model": model_id, "result": text}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.post("/api/sentiment")
 def sentiment(payload: TextPayload) -> dict[str, Any]:
-    """Analyze sentiment of the given text."""
     try:
-        result = PIPELINES["sentiment"](payload.text)
-        item = result[0]
-        score = round(float(item["score"]), 4)
-        return {
-            "task": "sentiment",
-            "model": MODELS["sentiment"],
-            "label": item["label"],
-            "score": score,
-            "result": f"{item['label']} ({score})",
-        }
+        model_id = MODELS["sentiment"]
+        result = query_hf_api(model_id, {"inputs": payload.text})
+        # API returns a nested list: [[{'label': 'positive', 'score': 0.99}, ...]]
+        # We want the top score
+        predictions = result[0]
+        top_item = max(predictions, key=lambda x: x["score"])
+        
+        score = round(float(top_item["score"]), 4)
+        return {"task": "sentiment", "model": model_id, "label": top_item["label"], "score": score, "result": f"{top_item['label']} ({score})"}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.post("/api/qa")
 def qa(payload: QAPayload) -> dict[str, Any]:
-    """Answer a question from a given context."""
     try:
-        result = PIPELINES["qa"](
-            context=payload.context,
-            question=payload.question,
-        )
-        score = round(float(result["score"]), 4)
-        return {
-            "task": "qa",
-            "model": MODELS["qa"],
-            "answer": result["answer"],
-            "score": score,
-            "result": result["answer"],
+        model_id = MODELS["qa"]
+        api_payload = {
+            "inputs": {
+                "question": payload.question,
+                "context": payload.context
+            }
         }
+        result = query_hf_api(model_id, api_payload)
+        # API returns: {'score': 0.9, 'answer': '...'}
+        score = round(float(result.get("score", 0)), 4)
+        return {"task": "qa", "model": model_id, "answer": result.get("answer", ""), "score": score, "result": result.get("answer", "")}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.post("/api/translate")
 def translate(payload: TranslatePayload) -> dict[str, Any]:
-    """Translate English text to French."""
     try:
-        result = PIPELINES["translate"](payload.text)
-        return {
-            "task": "translate",
-            "model": MODELS["translate"],
-            "result": result[0]["translation_text"],
-        }
+        model_id = MODELS["translate"]
+        result = query_hf_api(model_id, {"inputs": payload.text})
+        # API returns: [{'translation_text': '...'}]
+        text = result[0].get("translation_text", "")
+        return {"task": "translate", "model": model_id, "result": text}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
 
 @app.post("/api/ner")
 def ner(payload: TextPayload) -> dict[str, Any]:
-    """Extract named entities from text."""
     try:
-        outputs = PIPELINES["ner"](payload.text)
+        model_id = MODELS["ner"]
+        result = query_hf_api(model_id, {"inputs": payload.text})
+        # API returns list of dicts: [{'entity_group': 'PER', 'score': 0.99, 'word': 'John', ...}]
         entities = []
-        for item in outputs:
-            entities.append(
-                {
-                    "text": item.get("word", ""),
-                    "label": item.get("entity_group", item.get("entity", "")),
-                    "score": round(float(item.get("score", 0.0)), 4),
-                    "start": int(item.get("start", 0)),
-                    "end": int(item.get("end", 0)),
-                }
-            )
-        return {
-            "task": "ner",
-            "model": MODELS["ner"],
-            "entities": entities,
-            "result": entities,
-        }
+        for item in result:
+            entities.append({
+                "text": item.get("word", ""),
+                "label": item.get("entity_group", item.get("entity", "")),
+                "score": round(float(item.get("score", 0.0)), 4),
+                "start": int(item.get("start", 0)),
+                "end": int(item.get("end", 0))
+            })
+        return {"task": "ner", "model": model_id, "entities": entities, "result": entities}
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
