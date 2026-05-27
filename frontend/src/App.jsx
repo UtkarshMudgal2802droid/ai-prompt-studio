@@ -179,7 +179,7 @@ function App() {
       if (activeTool === 'qa') {
         res = await axios.post(`${API_BASE_URL}${tool.endpoint}`, { context: inputText, question })
       } else if (activeTool === 'generate') {
-        res = await axios.post(`${API_BASE_URL}${tool.endpoint}`, { text: inputText, max_length: 140 })
+        res = await axios.post(`${API_BASE_URL}${tool.endpoint}`, { text: inputText })
       } else {
         res = await axios.post(`${API_BASE_URL}${tool.endpoint}`, { text: inputText })
       }

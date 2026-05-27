@@ -105,7 +105,6 @@ def generate(payload: GeneratePayload) -> dict[str, Any]:
         response = model.generate_content(
             payload.text,
             generation_config=genai.GenerationConfig(
-                max_output_tokens=payload.max_length,
                 temperature=0.7,
                 top_p=0.9
             )
