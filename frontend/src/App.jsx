@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, useRef } from 'react'
 import axios from 'axios'
+import ReactMarkdown from 'react-markdown'
 import './App.css'
 
 const API_BASE_URL = 'https://ai-prompt-studio-yr1s.onrender.com'
@@ -390,7 +391,9 @@ function App() {
     return (
       <div className="generation-result">
         <div className="generation-result-content">
-          <p className="output-text">{output.data}</p>
+          <div className="output-text markdown-body">
+            <ReactMarkdown>{output.data}</ReactMarkdown>
+          </div>
         </div>
         <div className="generation-meta">
           <span className="generation-meta-pill">
