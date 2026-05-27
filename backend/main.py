@@ -75,7 +75,7 @@ class TextPayload(BaseModel):
 
 class GeneratePayload(BaseModel):
     text: str = Field(..., min_length=1)
-    max_length: int = Field(140, ge=20, le=500)
+    max_length: int = Field(1000, ge=20, le=2048)
 
 class QAPayload(BaseModel):
     context: str = Field(..., min_length=1)
