@@ -62,7 +62,10 @@ const TOOLS = [
     kind: 'dual',
     placeholder: 'Paste the source paragraph that contains the answer',
     questionPlaceholder: 'What do you want to know? The AI will find the answer in your text above',
-    examples: ['Use this if you have a paragraph and need an answer.'],
+    examples: [
+      'Cloud computing is the on-demand availability of computer system resources, especially data storage and computing power, without direct active management by the user. Large clouds often have functions distributed over multiple locations, each location being a data center. Cloud computing relies on sharing of resources to achieve coherence and economies of scale, similar to a public utility.',
+      'The James Webb Space Telescope is the largest, most powerful infrared space telescope ever built. It will study every phase in the history of our Universe, ranging from the first luminous glows after the Big Bang, to the formation of solar systems capable of supporting life on planets like Earth, to the evolution of our own Solar System.',
+    ],
     button: 'Get Answer',
     loadingText: 'Searching...',
   },

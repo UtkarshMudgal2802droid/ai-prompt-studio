@@ -283,6 +283,15 @@ button, textarea, input {
   text-overflow: ellipsis;
 }
 
+.result-content {
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
 .history-item span {
   display: block;
   margin-top: 0.35rem;
@@ -428,6 +437,22 @@ button, textarea, input {
   color: var(--text);
   font-size: 0.9rem;
   font-weight: 600;
+}
+
+.input-group textarea {
+  width: 100%;
+  padding: 1rem;
+  background: var(--surface-light);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+  resize: vertical;
+  min-height: 120px;
+  max-height: 250px;
+  overflow-y: auto;
+  transition: all 0.3s ease;
 }
 
 .input-box {
